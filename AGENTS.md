@@ -26,7 +26,7 @@
 - `src/ilink/__init__.py`：SDK 对外导出入口，统一暴露常量、客户端、登录函数、类型和存储接口。
 - `src/ilink/auth.py`：二维码登录流程，负责获取二维码、轮询扫码状态、处理确认和过期，并返回登录结果。
 - `src/ilink/client.py`：核心异步客户端，负责封装 iLink HTTP API、发送消息、发送输入状态、长轮询拉取消息和消息分发。
-- `src/ilink/store.py`：本地状态持久化，负责保存登录凭证、同步游标，以及按用户缓存 `context_token`。
+- `src/ilink/store.py`：本地状态持久化，负责保存登录凭证，以及按用户缓存 `context_token`。
 - `src/ilink/types.py`：协议相关的数据模型、枚举和登录常量定义，集中描述请求体、响应体和消息结构。
 - `src/ilink/utils.py`：通用工具函数，负责请求头构建、客户端消息 ID 生成、随机 UIN 生成等辅助逻辑。
 

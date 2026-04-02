@@ -351,6 +351,11 @@ class TestPollLoop:
 
         assert len(received_msgs) == 1
         assert received_msgs[0].from_user_id == "u1"
+        request_bodies = [
+            json.loads(call.request.content) for call in respx.calls
+        ]
+        assert request_bodies[0]["get_updates_buf"] == ""
+        assert request_bodies[1]["get_updates_buf"] == "cursor-1"
 
     @respx.mock
     @pytest.mark.asyncio
@@ -509,23 +514,35 @@ class TestPollLoop:
 
     @respx.mock
     @pytest.mark.asyncio
-    async def test_poll_loop_saves_sync_buf(self, tmp_path) -> None:
-        """poll_loop 应保存 get_updates_buf 到 SyncBufStore。"""
-        from ilink.store import SyncBufStore
+    async def test_poll_loop_restart_uses_empty_cursor(self) -> None:
+        """新的轮询实例首次请求应重新从空游标开始。"""
+        seen_cursors: list[str] = []
 
-        store = SyncBufStore(state_dir=tmp_path)
+        def make_response(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            seen_cursors.append(body["get_updates_buf"])
+            next_cursor = f"cursor-{len(seen_cursors)}"
+            return httpx.Response(
+                200,
+                json={"ret": 0, "msgs": [], "get_updates_buf": next_cursor},
+            )
 
         respx.post("https://test.example.com/ilink/bot/getupdates").mock(
-            return_value=httpx.Response(200, json={
-                "ret": 0, "msgs": [], "get_updates_buf": "new-cursor",
-            })
+            side_effect=make_response
         )
 
-        client = ILinkClient(API)
-        async with client:
-            await client.poll_loop(
+        first_client = ILinkClient(API)
+        async with first_client:
+            await first_client.poll_loop(
+                on_message=lambda m: None,
+                max_iterations=2,
+            )
+
+        second_client = ILinkClient(API)
+        async with second_client:
+            await second_client.poll_loop(
                 on_message=lambda m: None,
                 max_iterations=1,
-                sync_buf_store=store,
             )
-        assert store.get() == "new-cursor"
+
+        assert seen_cursors == ["", "cursor-1", ""]

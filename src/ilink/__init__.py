@@ -14,8 +14,6 @@ from .client import (
 from .store import (
     ContextTokenStore,
     Credentials,
-    SyncBufStore,
-    default_sync_buf_store,
     default_token_store,
     load_credentials,
     save_credentials,
@@ -43,9 +41,7 @@ __all__ = [
     # store — models & classes
     "ContextTokenStore",
     "Credentials",
-    "SyncBufStore",
     # store — public singletons
-    "default_sync_buf_store",
     "default_token_store",
     # store — functions
     "load_credentials",

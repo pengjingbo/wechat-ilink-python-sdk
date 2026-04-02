@@ -45,7 +45,7 @@ On first run, the bot will ask for QR-code login and cache credentials locally.
 
 - `ilink.auth`: QR-code login flow
 - `ilink.client`: async API client and polling loop
-- `ilink.store`: local persistence for credentials and cursors
+- `ilink.store`: local persistence for credentials and context tokens
 - `ilink.types`: protocol models and enums
 - `ilink.utils`: helper utilities
 
