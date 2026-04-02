@@ -1,0 +1,15 @@
+.venv/
+.pytest_cache/
+.idea/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+Thumbs.db
