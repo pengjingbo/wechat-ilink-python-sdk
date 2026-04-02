@@ -2,7 +2,7 @@
 
 ## 项目摘要
 
-项目根目录：`E:\workspace\graduation_project\wechat-ilink-sdk`
+项目根目录：仓库根目录
 
 这是一个 Python 版的 WeChat iLink SDK 项目，当前结构比较轻量，核心代码集中在 `src/ilink/`，测试代码集中在 `tests/`。
 
