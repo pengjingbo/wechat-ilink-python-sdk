@@ -2,6 +2,7 @@
 .pytest_cache/
 .idea/
 __pycache__/
+dist/
 *.py[cod]
 *.pyo
 *.pyd

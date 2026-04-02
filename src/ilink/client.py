@@ -22,8 +22,6 @@ import httpx
 # local
 from .store import (
     ContextTokenStore,
-    SyncBufStore,
-    default_sync_buf_store,
     default_token_store,
 )
 from .types import (
@@ -917,7 +915,6 @@ class ILinkClient:
             self,
             on_message: OnMessageCallback,
             *,
-            sync_buf_store: SyncBufStore | None = None,
             context_token_store: ContextTokenStore | None = None,
             max_iterations: int | None = None,
             max_consecutive_failures: int = 3,
@@ -943,8 +940,6 @@ class ILinkClient:
         Args:
             on_message: 收到用户消息时的异步回调。
                 回调中的异常会被捕获并记录，但不会中断消息循环。
-            sync_buf_store: 同步游标持久化存储。
-                不传时使用模块级默认单例 ``default_sync_buf_store``。
             context_token_store: 上下文令牌缓存。
                 不传时使用模块级默认单例 ``default_token_store``。
             max_iterations: 最大循环次数，None 表示无限循环（用于测试）。
@@ -957,15 +952,11 @@ class ILinkClient:
             SessionExpiredError: 会话过期（errcode=-14），立即抛出。
             Exception: 连续网络异常达到阈值，抛出原始异常。
         """
-        # 默认使用模块级单例
-        if sync_buf_store is None:
-            sync_buf_store = default_sync_buf_store
         if context_token_store is None:
             context_token_store = default_token_store
 
-        # 从持久化存储恢复同步游标，实现断点续传
-        sync_buf_store.load()
-        sync_buf: str = sync_buf_store.get()
+        # 轮询游标只保存在当前进程内存中。
+        sync_buf: str = ""
 
         # 业务错误的短退避计数器（与网络异常计数器分开）
         short_failures: int = 0
@@ -1025,10 +1016,9 @@ class ILinkClient:
                 short_failures = 0
                 consecutive_net_failures = 0
 
-                # 持久化同步游标
+                # 更新进程内游标，供下一次轮询请求继续增量拉取。
                 if resp.get_updates_buf:
                     sync_buf = resp.get_updates_buf
-                    sync_buf_store.set(sync_buf)
 
                 # 遍历并处理新消息
                 for msg in resp.msgs or []:
@@ -1072,7 +1062,6 @@ class ILinkClient:
             self,
             on_message: OnMessageCallback,
             *,
-            sync_buf_store: SyncBufStore | None = None,
             context_token_store: ContextTokenStore | None = None,
             short_backoff_s: float = 2.0,
             long_backoff_s: float = 60.0,
@@ -1085,7 +1074,6 @@ class ILinkClient:
 
         Args:
             on_message: 收到用户消息时的异步回调。
-            sync_buf_store: 同步游标持久化存储，不传时使用默认单例。
             context_token_store: 上下文令牌缓存，不传时使用默认单例。
             short_backoff_s: 短退避等待时间（秒），默认 2.0。
             long_backoff_s: 长退避等待时间（秒），默认 60.0。
@@ -1103,7 +1091,6 @@ class ILinkClient:
             # 收到消息后会调用on_message回调进行处理
             await self.poll_loop(
                 on_message,
-                sync_buf_store=sync_buf_store,
                 context_token_store=context_token_store,
                 short_backoff_s=short_backoff_s,
                 long_backoff_s=long_backoff_s,
