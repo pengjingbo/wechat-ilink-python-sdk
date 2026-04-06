@@ -1,34 +1,45 @@
 # PyPI Release Guide
 
-This project is published manually. Use TestPyPI for the first upload of each
-release candidate, then publish the same version to PyPI after verification.
+This project publishes from GitHub Actions on pushes to `main`. The release
+workflow lives at `.github/workflows/publish.yml` and uses PyPI Trusted
+Publisher with GitHub OIDC instead of a long-lived PyPI API token.
 
-## 1. Bump the version
+## 1. Configure PyPI Trusted Publisher
 
-Update the version in `pyproject.toml` before building release artifacts.
+In the PyPI project settings for `wechat-ilink-sdk`, add a Trusted Publisher
+for this repository:
 
-## 2. Install release tooling
+- Owner: `pengjingbo`
+- Repository: `wechat-ilink-python-sdk`
+- Workflow: `.github/workflows/publish.yml`
+
+PyPI's setup flow for GitHub Actions is documented at
+<https://docs.pypi.org/trusted-publishers/adding-a-publisher/>.
+
+## 2. Bump the version
+
+Update the version in `pyproject.toml` before merging to `main`. The publish
+workflow treats the version as the release gate and skips uploading if that
+version is already present on PyPI.
+
+## 3. Install release tooling
 
 ```powershell
 uv sync --extra release
 ```
 
-## 3. Build the distributions
+## 4. Run local verification
 
 ```powershell
+uv run pytest
 uv run python -m build
+uv run twine check (Get-ChildItem .\dist | ForEach-Object FullName)
 ```
 
 Expected output:
 
 - `dist/wechat_ilink_sdk-<version>.tar.gz`
 - `dist/wechat_ilink_sdk-<version>-py3-none-any.whl`
-
-## 4. Validate metadata and README rendering
-
-```powershell
-uv run twine check dist/*
-```
 
 ## 5. Verify install from local artifacts
 
@@ -45,45 +56,23 @@ py -3.11 -m venv .tmp-release-venv
 
 Remove the temporary environment when finished.
 
-## 6. Upload to TestPyPI
+## 6. Merge to `main`
 
-Set your TestPyPI API token in the current PowerShell session:
+After local verification passes, merge the version bump and changelog/docs
+updates into `main`. GitHub Actions will:
 
-```powershell
-$env:TWINE_USERNAME = "__token__"
-$env:TWINE_PASSWORD = "<testpypi-token>"
-uv run twine upload --repository testpypi dist/*
-```
+- install dependencies with `uv`
+- run `pytest`
+- build the sdist and wheel
+- run `twine check`
+- upload to PyPI if the target version is not already published
 
-## 7. Verify the TestPyPI package
+You can also trigger the same workflow manually with `workflow_dispatch`.
 
-In a clean environment, install from TestPyPI and confirm `import ilink`
-works. Keep the main PyPI index as an extra source for dependencies.
+## 7. Smoke test the published package
 
-```powershell
-py -3.11 -m venv .tmp-testpypi-venv
-.\\.tmp-testpypi-venv\\Scripts\\python -m pip install --upgrade pip
-.\\.tmp-testpypi-venv\\Scripts\\python -m pip install `
-    --index-url https://test.pypi.org/simple/ `
-    --extra-index-url https://pypi.org/simple `
-    wechat-ilink-sdk
-.\\.tmp-testpypi-venv\\Scripts\\python -c "import ilink; print(ilink.__all__)"
-```
-
-## 8. Upload to PyPI
-
-After TestPyPI verification passes, switch to a production PyPI token and
-upload the same built artifacts.
-
-```powershell
-$env:TWINE_USERNAME = "__token__"
-$env:TWINE_PASSWORD = "<pypi-token>"
-uv run twine upload dist/*
-```
-
-## 9. Smoke test the published package
-
-Install the released package from PyPI in a clean environment:
+Once the GitHub Actions publish job succeeds, verify the released package from
+PyPI in a clean environment:
 
 ```powershell
 py -3.11 -m venv .tmp-pypi-venv

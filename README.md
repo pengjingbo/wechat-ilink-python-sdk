@@ -22,6 +22,12 @@ Install the published package from PyPI:
 pip install wechat-ilink-sdk
 ```
 
+The published package exposes the SDK through the `ilink` module:
+
+```python
+from ilink import ILinkClient, login_with_qr
+```
+
 ## Quick Start
 
 Import the public SDK entry points from the `ilink` package:
@@ -68,7 +74,16 @@ Build release artifacts locally:
 ```bash
 uv sync --extra release
 uv run python -m build
-uv run twine check dist/*
+uv run twine check (Get-ChildItem .\dist | ForEach-Object FullName)
 ```
 
-The manual PyPI release checklist lives in `docs/releasing.md`.
+## Release Automation
+
+Pushes to `main` run the publish workflow in
+`.github/workflows/publish.yml`. The workflow runs tests, builds the
+distributions, and only uploads to PyPI when the version in
+`pyproject.toml` does not already exist on PyPI.
+
+Publishing uses PyPI Trusted Publisher with GitHub OIDC, so no long-lived
+PyPI API token is required in GitHub Actions. The repository and PyPI
+setup steps are documented in `docs/releasing.md`.
